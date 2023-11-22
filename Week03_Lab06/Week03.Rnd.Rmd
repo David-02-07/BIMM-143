@@ -1,0 +1,175 @@
+---
+title: "Week 3 R functions"
+author: "David Alvarez"
+date: "2023-10-23"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+This week we are introducing **R functions** how to write functions.
+
+Questions to answer:
+
+> Q1.Write a function grade() to determine an overall grade from a vector of student homework assignment scores dropping the lowest single score.If a student misses a homework(i.e. has an NA value)this can be used as a score to be potentially dropped.Your final function should be adquately explained with code comments and be able to work on an example class gradebook such as this one in CSV format:“https://tinyurl.com/gradeinput”[3pts]
+
+
+```{r}
+plot(1:10)
+```
+
+```{r}
+#Example input vectors to start with
+
+student1<-c(100,100,100,100,100,100,100,90)
+
+student2<-c(100,NA,90,90,90,90,97,80)
+
+student3<-c(90,NA,NA,NA,NA,NA,NA,NA)
+```
+
+Follow the guidelines from class
+
+```{r}
+# Straight forward mean()
+student1<-c(100,100,100,100,100,100,100,90)
+
+mean(student1)
+```
+```{r}
+# Which element of the vector is the lowest?
+which.min(student1)
+```
+Excluding the lowest score from mean() calculation
+```{r}
+# Will return everything except the eight element of the vector
+student1[-8]
+```
+Can use answer from which.min() to return all other elements of the vector
+```{r}
+# First working line
+mean(student1[-which.min(student1)])
+```
+# Other students data
+```{r}
+student2<-c(100,NA,90,90,90,90,97,80)
+mean(student2, na.rm=TRUE)
+
+#student3<-c(90,NA,NA,NA,NA,NA,NA,NA)
+mean(student3, na.rm=TRUE)
+
+```
+replacing all NA values with zero
+```{r}
+student2<-c(100,NA,90,90,90,90,97,80)
+x <- student2
+
+is.na(x)
+which( is.na(x))
+
+```
+"Mask" the NA elements
+```{r}
+x[-which(is.na(x))]
+```
+make NA elements zero
+```{r}
+# Useful tool
+x[is.na(x)] <- 0
+x
+mean(x)
+```
+Dropping lowest score
+```{r}
+x[is.na(x)] <- 0
+mean(x[-which.min(x)])
+```
+
+```{r}
+student3<-c(90,NA,NA,NA,NA,NA,NA,NA)
+x <-  student3
+x[is.na(x)] <- 0
+mean(x[-which.min(x)])
+```
+## Making the function
+```{r}
+grade <- function(x) {
+  x[is.na(x)] <- 0
+  mean(x[-which.min(x)])
+}
+```
+```{r}
+grade(student1)
+grade(student2)
+grade(student3)
+```
+
+```{r}
+#' Calculate the average score for a vector of student scores after dropping the lowest score.
+#' Missing values will be treated as zero
+#' 
+#' @param x A numberic vector of homework scores
+#'
+#' @return Average score
+#' @export
+#'
+#' @examples
+#' student = c(100, NA, 90, 97)
+#' grade(student)
+#' 
+grade <- function(x) {
+  # mask NA with zero
+  #Treat missing values as zero
+  x[is.na(x)] <- 0
+  # Exclude lowest score from mean
+  mean(x[-which.min(x)])
+}
+```
+
+Using the entire data on the whole class
+CSVformat:
+“https://tinyurl.com/gradeinput”
+```{r}
+url <- "https://tinyurl.com/gradeinput"
+gradebook <- read.csv(url, row.names = 1)
+```
+
+```{r}
+apply(gradebook, 1, grade)
+```
+
+
+
+> Q2. Using your grade() function and the supplied gradebook, Who is the top scoring student overall in the gradebook?[3pts]
+ 
+ apply() function and save the results
+ 
+```{r}
+results <- apply(gradebook, 1, grade)
+sort(results, decreasing = TRUE)
+```
+```{r}
+which.max(results)
+```
+ 
+> Q3.From your analysis of the gradebook,which homework was toughest on students(i.e.obtained the lowest scores overall?[2pts]
+
+```{r}
+gradebook
+```
+```{r}
+ave.scores <- apply(gradebook, 2, mean, na.rm=TRUE)
+ave.scores
+which.min(ave.scores)
+
+```
+```{r}
+med.scores <- apply(gradebook, 2, median, na.rm=TRUE)
+med.scores
+which.min(med.scores)
+```
+```{r}
+boxplot(gradebook)
+```
+

@@ -1,0 +1,224 @@
+---
+title: "Week 6 DESeq Lab"
+author: "David Alvarez"
+format: pdf
+---
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+```{r}
+head(counts)
+View(counts)
+
+```
+
+```{r}
+View(metadata)
+head(metadata)
+```
+
+> Q1. How many genes are in this dataset?
+
+There are `r nrow(counts)` genes in this dataset.
+
+> Q2. How many 'control' cell lines do we have?
+
+```{r include=FALSE}
+n.control <- sum(metadata$dex == "control")
+```
+
+There are `r n.control` cell lines in this dataset
+
+To find out where control samples are we need he metadata
+
+```{r}
+control <- metadata[metadata$dex == "control", ]
+control.counts <- ( counts[ , control$id] ) 
+control.mean <- rowSums(control.counts)/4
+head(control.mean) 
+```
+
+> Q3. How would you make the above code in either approach more robust?
+
+Can make the code more robust by using rowmeans rather than rowsums written below
+
+```{r}
+control <- metadata[metadata$dex == "control", ]
+control.counts <- ( counts[ , control$id] ) 
+control.mean <- rowMeans(control.counts)
+head(control.mean) 
+```
+
+> Q4. Follow the same procedure for the 'treated' samples
+
+```{r}
+treated <- metadata[metadata$dex == "treated", ]
+treated.counts <- ( counts[ , treated$id] ) 
+treated.mean <- rowMeans(treated.counts)
+head(treated.mean) 
+```
+
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+```
+
+> Q5(a). Create a scatter plot showing the mean of the treated samples against the mean of the control samples.
+
+```{r}
+plot(meancounts[,1],meancounts[,2], xlab="Control", ylab="Treated")
+```
+
+> Q5(b). Use the 'ggplot2' package to reproduce this figure. What 'geom\_()" function did you use?
+
+```{r}
+library(ggplot2)
+
+ggplot(meancounts) + aes(control.mean, treated.mean) + geom_point() 
+```
+
+> Q6. Plot both axes on a log scale. What is the argument to 'plot()' that allows you to do this?
+
+```{r}
+plot(meancounts[,1], meancounts[,2], log="xy", xlab="Log Control Counts", ylab="Log of Treated Counts")
+```
+
+The argument to 'plot()' that allows for this is the 'log=xy' function since it plots our x and y-arguments on a log scale.
+
+```{r}
+meancounts$log2fc <- log2(meancounts$treated.mean/meancounts$control.mean)
+```
+
+```{r}
+head(meancounts)
+```
+
+```{r}
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+
+to.rm <- unique(zero.vals[,1])
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+```
+
+> Q7. What is the purpose of the 'arr.ind' argument in the 'which()' function above? Why would we then take the first column of the output and need to call the unique() function?
+
+The purpose of the arr.ind argument in the 'which()' function specifies the row and column in which the elements of a vector are true in this case and runs the results to display. Would need to call the unique() function to select the values in the first column in which the zero value is true and take them out since they are not useful in further calculations and not necessary to input.
+
+> Q8. Using the 'up.ind' vector, can you determine how many up regulated genes we have at greater than 2 fc level?
+
+```{r}
+up.ind <- mycounts$log2fc > 2
+sum(up.ind)
+```
+
+There are 250 upregulated genes
+
+> Q9. How many down regulated genes have a greater than 2 fc level?
+
+```{r}
+down.ind <- mycounts$log2fc < (-2)
+sum(down.ind)
+```
+
+There are 367 down regulated genes
+
+> Q10. Do you trust these results?
+
+We cannot trust these results, at least not yet, because we have not determined if the fold change is statistically significant or not among the different groups. We can run DESeq analysis to help us answer and trust the results better.
+
+```{r}
+library(DESeq2)
+citation("DESeq2")
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData=metadata, 
+                              design=~dex)
+dds
+```
+
+```{r}
+dds <- DESeq(dds)
+```
+
+```{r}
+res <- results(dds)
+res
+```
+
+```{r}
+summary(res, alpha=0.05)
+```
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+columns(org.Hs.eg.db)
+```
+
+```{r}
+res$symbol <- mapIds(org.Hs.eg.db, keys=row.names(res), keytype="ENSEMBL", column="SYMBOL", multiVals="first")
+head(res)
+```
+
+> Q11. Run the 'mapIds()' function two more times to add the Entrez ID and UniProt accession and GENENAME as new columns.
+
+
+```{r}
+res$entrez <- mapIds(org.Hs.eg.db, keys=row.names(res), column="ENTREZID", keytype="ENSEMBL", multiVals="first")
+
+res$uniprot <- mapIds(org.Hs.eg.db, keys=row.names(res), column="UNIPROT",  keytype="ENSEMBL",  multiVals="first")
+head(res)
+
+res$genename <- mapIds(org.Hs.eg.db, keys=row.names(res), column="GENENAME", keytype="ENSEMBL",  multiVals="first")
+
+head(res)
+```
+
+```{r}
+ord <- order( res$padj )
+View(res[ord,])
+head(res[ord,])
+
+write.csv(res[ord,], "deseq_results.csv")
+```
+
+```{r}
+plot( res$log2FoldChange,  -log(res$padj), 
+      xlab="Log2(FoldChange)",
+      ylab="-Log(P-value)")
+```
+
+```{r}
+plot( res$log2FoldChange,  -log(res$padj), 
+ ylab="-Log(P-value)", xlab="Log2(FoldChange)")
+
+# Add some cut-off lines
+abline(v=c(-2,2), col="darkgray", lty=2)
+abline(h=-log(0.05), col="darkgray", lty=2)
+```
+
+```{r}
+# Setup our custom point color vector 
+mycols <- rep("gray", nrow(res))
+mycols[ abs(res$log2FoldChange) > 2 ]  <- "red" 
+
+inds <- (res$padj < 0.01) & (abs(res$log2FoldChange) > 2 )
+mycols[ inds ] <- "blue"
+
+# Volcano plot with custom colors 
+plot( res$log2FoldChange,  -log(res$padj), 
+ col=mycols, ylab="-Log(P-value)", xlab="Log2(FoldChange)" )
+
+# Cut-off lines
+abline(v=c(-2,2), col="gray", lty=2)
+abline(h=-log(0.1), col="gray", lty=2)
+```
+

@@ -1,0 +1,225 @@
+---
+title: "Structural Bioinformatics Lab"
+author: "David Alvarez"
+format: pdf
+---
+
+
+```{r}
+library("tidyverse")
+data_summary <- read_csv("data_summary.csv")
+data_summary
+
+```
+
+> Q1. What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy?
+
+```{r}
+total_structures <- sum(data_summary$"Total")
+total_structures
+
+# Number of structures solved by X-ray
+xray <- sum(data_summary$"X-ray")
+
+# Number of structures solved by Electron Microscopy
+em <- sum(data_summary$"EM")
+
+# Percentage of structures solved by X-Ray and Electron Microscopy
+xray_percent <- (xray/total_structures) * 100
+em_percent <- (em/total_structures) * 100
+
+xray_percent
+em_percent
+
+# Can be seen that the percentage of structres in the PDB solved by X-Ray and Electron Microscopy are 84.83% and 8.33% respectively.
+```
+
+> Q2. What proportion of structures in the PDB are protein?
+
+```{r}
+total_protein <- sum(data_summary[1:3,]$"Total")
+
+# Proportion of structures that are protein
+
+protein_structures <- (total_protein/total_structures) 
+protein_structures
+
+# The proportion of structures that are proteins in the PDB are about 97%
+```
+
+> Q3. Type 'HIV' in the PDB website search box and determine how many 'HIV-1' protease structures are in the current PDB?
+
+```{r}
+# After doing a quick search, I found there to be 2,767 HIV-1 protease structures in the current PDB.
+```
+
+> Q4. Why do we see just one atom per water molecule in this structure?
+
+```{r}
+# We see only one atom per water molecule in this structure because it is a ball and stick model that is showing the molecule as a whole rather than it's atoms individually.
+```
+
+> Q5. There is a critical "conserved" water molecular in the binding site. Can you identify this water molecule? What residue number does this water molecular have?
+
+```{r}
+# I believe the critical "conserved" water molecule I found within the binding site was "HOH313", indicating the 313 water molecule in the structure.
+```
+
+
+```{r}
+library(bio3d)
+```
+
+```{r}
+pdb <- read.pdb("1hsg")
+pdb
+```
+
+> Q7. How many amino acid residues are there in the pdb object?
+
+```{r}
+# There are 99 amino acid residues in this pdb object
+```
+
+> Q8. Name one of the two non-protein residues
+
+```{r}
+
+# One of the two non-protein residues is MK1 (1)
+```
+
+> Q9. How many protein chains are in this structure
+
+```{r}
+# There are two protein chains in this structure, either A or B
+```
+
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+```{r}
+# Performing flexibility predictions
+m <- nma(adk)
+plot(m)
+```
+
+```{r}
+mktrj(m, file="adk_m7.pdb")
+```
+
+
+```{r}
+library("msa")
+```
+
+> Q10. Which of the packages above is found only on BioConductor and not CRAN?
+
+```{r}
+# the "msa" package is found only on BioConductor and not CRAN which is why we had to provide an extra step for the package.
+```
+
+> Q11. Which of the above packages is not found on BioConductor or CRAN?
+
+```{r}
+# It seems as though the "Grant-lab/bio3d-view" package is found on neither which is why we had to install it also from another tool.
+```
+
+> Q12. True or False: Functions from the devtools package can be used to install packages from GitHub and BitBucket?
+
+```{r}
+# True
+```
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+aa
+```
+
+> Q13. How many amino acids are in this sequence?
+
+```{r}
+# After observing the sequence, it seems there are 214 amino acids.
+```
+
+```{r}
+# Blast or hmmer search 
+b <- blast.pdb(aa)
+```
+
+```{r}
+hits <- plot(b)
+```
+
+```{r}
+head(hits$pdb.id)
+```
+
+
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+# Align releated PDBs
+# pdbs <- pdbaln(files, fit = TRUE)
+```
+
+```{r}
+# Vector containing PDB codes for figure axis
+#ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+#plot(pdbs, labels=ids,)
+```
+
+
+```{r}
+# Perform PCA
+#pc.xray <- pca(pdbs)
+#plot(pc.xray)
+```
+
+```{r}
+# Calculate RMSD
+# rd <- rmsd(pdbs)
+
+# Structure-based clustering
+# hc.rd <- hclust(dist(rd))
+# grps.rd <- cutree(hc.rd, k=3)
+
+#plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
+
+```{r}
+# Visualize first principal component
+# pc1 <- mktrj(pc.xray, pc=1, file="pc_1.pdb")
+```
+
+```{r}
+#Plotting results with ggplot2
+library(ggplot2)
+library(ggrepel)
+
+# df <- data.frame(PC1=pc.xray$z[,1], PC2=pc.xray$z[,2],col=as.factor(grps.rd),ids=ids)
+
+# p <- ggplot(df) + aes(PC1, PC2, col=col, label=ids) +geom_point(size=2) +geom_text_repel(max.overlaps = 20) +theme(legend.position = "none")
+# p
+```
+
+```{r}
+# NMA of all structures
+# modes <- nma(pdbs)
+#plot(modes, pdbs, col=grps.rd)
+```
+
+> Q14. What do you notice about this plot? 
+
+```{r}
+# I notice that the green and red lines stay consistent with each other throughout the duration of the graph, whereas the black line different in mainly two regions. They seem to differ most around position 50 and around 140 that could show the different regions that are for nucleotide binding.
+```
+
+
+
